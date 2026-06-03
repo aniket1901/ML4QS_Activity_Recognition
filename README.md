@@ -8,7 +8,7 @@ Wrist-worn sensor data pipeline and ML classifier for recognising 5 daily activi
 
 This project investigates whether a machine learning model can infer a person's current activity purely from the motion of their wrist. Using the [Phyphox](https://phyphox.org/) app on a wrist-mounted smartphone, we collected accelerometer, gyroscope, and linear accelerometer data across five activities that span a wide behavioral spectrum — from complete stillness to vigorous physical movement.
 
-The dataset was collected by 3 participants, each recording 8 sessions per activity, yielding 120 labeled sessions total. Features are extracted from sliding windows over the raw time-series data and fed into a classical ML classifier.
+The dataset is collected by 3 participants, each recording 8 sessions per activity, yielding 120 labeled sessions total. Features are extracted from sliding windows over the raw time-series data and fed into a classical ML classifier.
 
 ---
 
