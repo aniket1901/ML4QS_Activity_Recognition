@@ -1,12 +1,12 @@
 # Activity Recognition from Wrist-Worn Sensors
 
-Wrist-worn sensor data pipeline and ML classifier for recognising 5 daily activities — smoking, typing, idle, cooking, and exercising — using Phyphox accelerometer and gyroscope data.
+Wrist-worn sensor data pipeline and ML classifier for recognising 5 daily activities — smoking, typing, idle, cooking, and exercising using Phyphox accelerometer and gyroscope data.
 
 ---
 
 ## Overview
 
-This project investigates whether a machine learning model can infer a person's current activity purely from the motion of their wrist. Using the [Phyphox](https://phyphox.org/) app on a wrist-mounted smartphone, we collected accelerometer, gyroscope, and linear accelerometer data across five activities that span a wide behavioral spectrum — from complete stillness to vigorous physical movement.
+This project investigates whether a machine learning model can infer a person's current activity purely from the motion of their wrist. Using the [Phyphox](https://phyphox.org/) app on a wrist-mounted smartphone, we collected accelerometer, gyroscope, and linear accelerometer data across five activities that span a wide behavioral spectrum from complete stillness to vigorous physical movement.
 
 The dataset is collected by 3 participants, each recording 8 sessions per activity, yielding 120 labeled sessions total. Features are extracted from sliding windows over the raw time-series data and fed into a classical ML classifier.
 
@@ -20,7 +20,7 @@ The dataset is collected by 3 participants, each recording 8 sessions per activi
 | **Typing + Mouse** | Desk work; rapid low-amplitude wrist vibrations from keystrokes |
 | **Idle** | Seated at rest, hand not engaged; near-zero signal baseline |
 | **Cooking** | Stirring, chopping, reaching; freeform high-variance arm motion |
-| **Exercising** | Brisk walking or jogging; strong periodic full-body movement |
+| **Exercising** | Dumbell shoulder exercises; strong periodic full-body movement |
 
 ---
 
@@ -43,7 +43,7 @@ ml-activity-recognition/
 │
 ├── data/
 │   └── raw/
-│       ├── alice/
+│       ├── subject_1/
 │       │   ├── smoking/
 │       │   │   ├── session_01/
 │       │   │   │   ├── Accelerometer.csv
@@ -55,8 +55,8 @@ ml-activity-recognition/
 │       │   ├── idle/
 │       │   ├── cooking/
 │       │   └── exercising/
-│       ├── bob/
-│       └── charlie/
+│       ├── subject_2/
+│       └── subject_3/
 │
 ├── notebooks/
 │   ├── 01_eda.ipynb            ← Explore raw sensor data
@@ -100,8 +100,8 @@ Data is split **by person**, not randomly, to test generalisation to an unseen i
 
 | Split | Person | Sessions | Windows (approx) |
 |---|---|---|---|
-| Train | alice + bob | 80 | ~2,320 |
-| Test | charlie | 40 | ~1,160 |
+| Train | Mansi + Shreya | 80 | ~2,320 |
+| Test | Aniket | 40 | ~1,160 |
 
 ---
 
@@ -175,16 +175,6 @@ Install with:
 ```bash
 pip install -r requirements.txt
 ```
-
----
-
-## Team
-
-| Name | Role |
-|---|---|
-| Alice | Data collection, modelling |
-| Bob | Data collection, preprocessing |
-| Charlie | Data collection, EDA |
 
 ---
 
