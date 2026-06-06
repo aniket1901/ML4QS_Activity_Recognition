@@ -100,8 +100,8 @@ Data is split **by person**, not randomly, to test generalisation to an unseen i
 
 | Split | Person | Sessions | Windows (approx) |
 |---|---|---|---|
-| Train | Mansi + Shreya | 80 | ~2,320 |
-| Test | Aniket | 40 | ~1,160 |
+| Train | subject_1 + subject_2 | 80 | ~2,320 |
+| Test | subject_3 | 40 | ~1,160 |
 
 ---
 
