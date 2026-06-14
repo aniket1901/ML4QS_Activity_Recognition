@@ -4,6 +4,7 @@
 \documentclass[runningheads]{llncs}
 
 \usepackage{graphicx}
+\graphicspath{{figures/}{./}}
 \usepackage{booktabs}
 \usepackage{amsmath}
 \usepackage{hyperref}
@@ -66,7 +67,8 @@ For every window we compute three groups of features, applied to all twelve sign
 \caption{Feature groups computed for every 2-second window (50\,Hz, 50\% overlap).}
 \label{tab:features}
 \centering\small
-\begin{tabular}{lp{1.8cm}p{4.6cm}p{3.3cm}}
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{p{2.1cm}cp{4.2cm}p{3.1cm}}
 \toprule
 \textbf{Group} & \textbf{Count} & \textbf{What it captures} & \textbf{Examples} \\
 \midrule
@@ -106,7 +108,7 @@ The random-forest importances tell the same story (Fig.~\ref{fig:importance}). T
 
 \begin{figure}[ht]
   \centering
-  \includegraphics[width=0.85\textwidth]{figures/rf_feature_importance.png}
+  \includegraphics[width=0.72\textwidth]{figures/rf_feature_importance.png}
   \caption{Top-20 random-forest feature importances (trained on subject\_1 + subject\_3, all 249 features). Time-domain spread features of the accelerometer and gyroscope dominate; the first frequency feature appears only at rank 9.}
   \label{fig:importance}
 \end{figure}
@@ -140,7 +142,8 @@ Every tunable model was tuned with \texttt{GridSearchCV} under \textbf{GroupKFol
 \caption{Grids searched (GridSearchCV under GroupKFold) and selected settings.}
 \label{tab:grids}
 \centering\small
-\begin{tabular}{lp{6.2cm}l}
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{lp{5.8cm}p{2.2cm}}
 \toprule
 \textbf{Model} & \textbf{Grid searched} & \textbf{Selected} \\
 \midrule
@@ -166,32 +169,32 @@ GroupKFold fixes this by grouping all windows from one recording into the same f
 \label{sec:discussion}
 % ─────────────────────────────────────────────────────────────
 
-Table~\ref{tab:results} lists every model with its best setting, grouped-CV accuracy, and held-out test accuracy and macro-F1. Figure~\ref{fig:comparison} plots the four test metrics with the random baseline.
+Table~\ref{tab:results} lists every model with its grouped-CV accuracy and its held-out test accuracy and macro-F1 (the selected hyperparameters are in Table~\ref{tab:grids}). Figure~\ref{fig:comparison} plots the four test metrics with the random baseline.
 
 \begin{table}[ht]
-\caption{All models, sorted by test macro-F1. Grouped-CV is on training subjects; test is the held-out subject\_2.}
+\caption{All models, sorted by test macro-F1. Grouped-CV is on the training subjects; test is the held-out subject\_2. Selected hyperparameters are given in Table~\ref{tab:grids}.}
 \label{tab:results}
 \centering\small
-\begin{tabular}{lp{4.6cm}ccc}
+\begin{tabular}{lccc}
 \toprule
-\textbf{Model} & \textbf{Best hyperparameters} & \textbf{CV acc} & \textbf{Test acc} & \textbf{Test F1} \\
+\textbf{Model} & \textbf{CV acc} & \textbf{Test acc} & \textbf{Test F1} \\
 \midrule
-\textbf{Stacking (SVM+RF+kNN+DT $\to$ LR)} & tuned bases; LogReg meta & 0.9920 & \textbf{0.9295} & \textbf{0.9287} \\
-Voting (hard) & tuned SVM+RF+kNN+DT & 0.9924 & 0.9277 & 0.9271 \\
-Voting (soft) & tuned SVM+RF+kNN+DT & 0.9929 & 0.9223 & 0.9213 \\
-Gradient Boosting & lr 0.1, depth 2, 200 trees & 0.9893 & 0.9036 & 0.9016 \\
-SVM (RBF) & $C{=}100$, $\gamma{=}0.001$ & 0.9915 & 0.8893 & 0.8892 \\
-kNN & $k=3$ & 0.9920 & 0.8848 & 0.8840 \\
-Naive Bayes & defaults & 0.9353 & 0.8812 & 0.8792 \\
-Random Forest & 300 trees, depth None, mf 0.3 & 0.9879 & 0.8804 & 0.8762 \\
-Decision Tree & depth 7 & 0.9362 & 0.8250 & 0.8197 \\
+\textbf{Stacking (SVM+RF+kNN+DT $\to$ LR)} & 0.9920 & \textbf{0.9295} & \textbf{0.9287} \\
+Voting (hard) & 0.9924 & 0.9277 & 0.9271 \\
+Voting (soft) & 0.9929 & 0.9223 & 0.9213 \\
+Gradient Boosting & 0.9893 & 0.9036 & 0.9016 \\
+SVM (RBF) & 0.9915 & 0.8893 & 0.8892 \\
+kNN & 0.9920 & 0.8848 & 0.8840 \\
+Naive Bayes & 0.9353 & 0.8812 & 0.8792 \\
+Random Forest & 0.9879 & 0.8804 & 0.8762 \\
+Decision Tree & 0.9362 & 0.8250 & 0.8197 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
 \begin{figure}[ht]
   \centering
-  \includegraphics[width=0.95\textwidth]{figures/model_comparison.png}
+  \includegraphics[width=0.88\textwidth]{figures/model_comparison.png}
   \caption{Accuracy, macro-F1, precision, and recall on the held-out subject\_2 for all models (standardised features). The dashed line marks the 0.20 accuracy of random guessing among five classes. The ensembles lead, with stacking on top.}
   \label{fig:comparison}
 \end{figure}
@@ -204,7 +207,7 @@ Figure~\ref{fig:confusion} is the normalised confusion matrix for the stacking m
 
 \begin{figure}[ht]
   \centering
-  \includegraphics[width=0.62\textwidth]{figures/cm_best.png}
+  \includegraphics[width=0.52\textwidth]{figures/cm_best.png}
   \caption{Normalised confusion matrix of the stacking model on the held-out subject\_2 (standardised features). Rows are true activities. Cooking and smoking are the main sources of error; idle and typing are nearly clean.}
   \label{fig:confusion}
 \end{figure}
