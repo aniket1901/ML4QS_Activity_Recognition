@@ -50,7 +50,7 @@ This report covers feature engineering and classical modelling. The question we 
 \label{sec:features}
 % ─────────────────────────────────────────────────────────────
 
-Classical models need a fixed-length vector per example, so we summarise each window into features (course book Ch.~4~\cite{hoogendoorn2018}). All signals are resampled to 50\,Hz: the earlier analysis showed almost all motion sits below about 12\,Hz, so 50\,Hz leaves headroom while matching typical consumer wearables.
+Classical models need a fixed-length vector per example, so we summarise each window into features (course book Ch.~4~\cite{hoogendoorn2018}), following standard practice in human activity recognition from wearable sensors~\cite{lara2013}. All signals are resampled to 50\,Hz: the earlier analysis showed almost all motion sits below about 12\,Hz, so 50\,Hz leaves headroom while matching typical consumer wearables.
 
 \subsection{Window size}
 We slice the signal into \textbf{2-second windows with 50\% overlap} (a 1-second step). The first report had promised 4-second windows, and we changed that on purpose. Two seconds still captures the dominant rhythm of every activity, it roughly doubles the number of windows (more training examples), and shorter windows mix fewer distinct sub-movements. We do not claim 2\,s captures a full smoking cycle, which is slower; it captures enough of the repeating motion to be informative, and the extra examples were worth more than fitting one whole cycle per window. This gives \textbf{3{,}360 windows}, balanced across activities (672 each): \textbf{2{,}240 training} (subject\_1 + subject\_3) and \textbf{1{,}120 test} (subject\_2).
@@ -83,7 +83,7 @@ All features          & 249 & 0.8884 & 0.8858 \\
 \end{tabular}
 \end{table}
 
-The time-domain block carries most of the signal (0.8955 alone). Frequency features alone reach 0.8268, useful but secondary; the nine correlation features alone manage only 0.4732, well above the 0.20 random baseline but too weak on their own. One result surprised us: the full set (0.8884) scored slightly \emph{below} time-domain alone. The likely cause is redundancy and noise, since 191 feature pairs have $|r| > 0.95$, so the extra columns mostly repeat information while a few weak features dilute the forest's splits. We kept all 249 anyway, because the models we actually deploy (standardised SVM, ensembles) handle redundant inputs well. The random-forest importances agree: the top features are \texttt{acc\_y\_rms} and \texttt{acc\_y\_sma} (vertical-axis movement) and gyroscope spread features, while the first frequency feature appears only at rank~9. For these models the amount and variability of motion dominate; rhythm adds a smaller increment.
+The time-domain block carries most of the signal (0.8955 alone). Frequency features alone reach 0.8268, useful but secondary; the nine correlation features alone manage only 0.4732, well above the 0.20 random baseline but too weak on their own. One result surprised us: the full set (0.8884) scored slightly \emph{below} time-domain alone. The likely cause is redundancy and noise, since 191 feature pairs have $|r| > 0.95$, so the extra columns mostly repeat information while a few weak features dilute the forest's splits. We kept all 249 anyway, because the models we actually deploy (standardised SVM, ensembles) handle redundant inputs well. The random-forest importances agree: the top features are \texttt{acc\_y\_rms} and \texttt{acc\_y\_sma} (vertical-axis movement) and gyroscope spread features, while the first frequency feature appears only at rank~9, so motion magnitude dominates and rhythm adds a smaller increment.
 
 
 % ─────────────────────────────────────────────────────────────
@@ -92,10 +92,10 @@ The time-domain block carries most of the signal (0.8955 alone). Frequency featu
 % ─────────────────────────────────────────────────────────────
 
 \subsection{Person-independent split}
-We train on subject\_1 and subject\_3 (2{,}240 windows) and test on the held-out subject\_2 (1{,}120 windows), each balanced across the five activities. Subject\_2 never appears in training or model selection. All 249 features are standardised to zero mean and unit variance using training statistics only, then applied unchanged to the test windows. The pipeline uses scikit-learn~\cite{pedregosa2011}.
+We train on subject\_1 and subject\_3 (2{,}240 windows) and test on the held-out subject\_2 (1{,}120 windows), each balanced across the five activities. Subject\_2 never appears in training or model selection. This person-independent setup is the realistic way to evaluate activity recognition: random splits over windows badly overestimate performance because adjacent windows are near-identical~\cite{hammerla2016}. All 249 features are standardised to zero mean and unit variance using training statistics only, then applied unchanged to the test windows. The pipeline uses scikit-learn~\cite{pedregosa2011}.
 
 \subsection{Model line-up}
-We compared classical models with different inductive biases, then voted and stacked over the strongest ones (course book Ch.~7~\cite{hoogendoorn2018}): \textbf{kNN} and \textbf{Naive Bayes} as light-assumption baselines; a \textbf{Decision Tree} for interpretability; a \textbf{Random Forest} (robust, gives importances); an \textbf{SVM (RBF)} for curved boundaries on subtle cases like smoking vs.\ idle; \textbf{Gradient Boosting}; and \textbf{Voting (hard/soft)} and \textbf{Stacking} over the tuned base learners. Ensembling helps because the base learners make different mistakes, so combining them cancels some error. Stacking goes further than voting: a logistic-regression meta-learner is trained on the base models' outputs and learns which one to trust per case, which is why it edges out plain voting here.
+We compared classical models with different inductive biases, then voted and stacked over the strongest ones (course book Ch.~7~\cite{hoogendoorn2018}): \textbf{kNN} and \textbf{Naive Bayes} as light-assumption baselines; a \textbf{Decision Tree} for interpretability; a \textbf{Random Forest} (robust, gives importances); an \textbf{SVM (RBF)} for curved boundaries on subtle cases like smoking vs.\ idle; \textbf{Gradient Boosting}; and \textbf{Voting (hard/soft)} and \textbf{Stacking} over the tuned base learners. Naive Bayes assumes the features are independent, which our heavily correlated features clearly violate, so we expected it to lag and treat it only as a floor. Ensembling helps because the base learners make different mistakes, so combining them cancels some error. We built the stack from four base learners spanning distinct families (margin-based SVM, bagged trees, distance-based kNN, and a single tree); gradient boosting, itself a boosted tree ensemble close to the random forest, is reported as a standalone baseline rather than a stack member to keep the members complementary. Stacking goes further than voting: a logistic-regression meta-learner is trained on the base models' outputs and learns which one to trust per case, which is why it edges out plain voting here.
 
 \subsection{Hyperparameter optimization}
 Every tunable model was tuned with \texttt{GridSearchCV} under \textbf{GroupKFold} grouped by recording session (Sect.~\ref{sec:cv}); the grids and chosen settings are in Table~\ref{tab:grids}. Naive Bayes was left at defaults, and the ensembles reuse these tuned base learners.
@@ -122,7 +122,7 @@ Naive Bayes & none (GaussianNB defaults) & defaults \\
 
 \subsection{Why GroupKFold, not shuffled K-fold}
 \label{sec:cv}
-Our windows overlap by 50\%, so consecutive windows from one recording share half their samples. A shuffled K-fold scatters such near-duplicates across folds, letting a model memorise a recording rather than learn the activity and inflating the CV score; in an earlier run this made kNN with $k=1$ look like the winner, the classic sign of leakage. GroupKFold keeps all windows from one recording in the same fold, so overlapping windows never split across folds. Every CV number we report uses this leakage-free setup, and it changed which models we trusted.
+Our windows overlap by 50\%, so consecutive windows from one recording share half their samples. A shuffled K-fold scatters such near-duplicates across folds, letting a model memorise a recording and inflating the CV score; in an earlier run this made kNN with $k=1$ look like the winner, the classic sign of leakage. GroupKFold keeps all windows from one recording in the same fold, so every CV number we report is leakage-free, and this changed which models we trusted.
 
 
 % ─────────────────────────────────────────────────────────────
@@ -176,7 +176,7 @@ Grouped-CV reports about 0.99 for the top models while held-out test sits near 0
 \label{sec:conclusion}
 % ─────────────────────────────────────────────────────────────
 
-To answer the research question: yes, a classical classifier on engineered time- and frequency-domain features recognises these five activities well for an unseen subject (0.9295 accuracy, 0.9287 macro-F1, far above the 0.20 baseline), driven by ensembling rather than any single model. Time-domain spread features did most of the work, with the remaining errors around cooking and smoking, the two least repeatable activities. The honest limit is the new person: leave-one-subject-out drops to about 0.53, so two training subjects cannot yet cover individual variation. That gap, plus the fact that our features are hand-designed window statistics, motivates the deep-learning stage, where a model can learn representations directly from the raw time series.
+To answer the research question: yes, a classical classifier on engineered time- and frequency-domain features recognises these five activities well for an unseen subject (0.9295 accuracy, 0.9287 macro-F1, far above the 0.20 baseline), driven by ensembling rather than any single model. Time-domain spread features did most of the work, with the remaining errors around cooking and smoking, the two least repeatable activities. The honest limit is the new person: leave-one-subject-out drops to about 0.53, so two training subjects cannot yet cover individual variation. That gap, plus the fact that our features are hand-designed window statistics, motivates the deep-learning stage, where a model can learn representations directly from the raw time series~\cite{ordonez2016}.
 
 
 % ─────────────────────────────────────────────────────────────
@@ -192,6 +192,18 @@ Journal of Machine Learning Research \textbf{12}, 2825--2830 (2011)
 \bibitem{phyphox2019}
 Staacks, S., Hutz, S., Heinke, H., Stampfer, C.: Advanced tools for smartphone-based experiments: Phyphox.
 Physics Education \textbf{53}(4), 045009 (2018)
+
+\bibitem{lara2013}
+Lara, O.D., Labrador, M.A.: A survey on human activity recognition using wearable sensors.
+IEEE Communications Surveys \& Tutorials \textbf{15}(3), 1192--1209 (2013)
+
+\bibitem{hammerla2016}
+Hammerla, N.Y., Halloran, S., Pl\"otz, T.: Deep, convolutional, and recurrent models for human activity recognition using wearables.
+In: Proceedings of the International Joint Conference on Artificial Intelligence (IJCAI), pp.~1533--1540 (2016)
+
+\bibitem{ordonez2016}
+Ord\'o\~nez, F.J., Roggen, D.: Deep convolutional and LSTM recurrent neural networks for multimodal wearable activity recognition.
+Sensors \textbf{16}(1), 115 (2016)
 
 \end{thebibliography}
 
