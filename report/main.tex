@@ -152,14 +152,21 @@ Decision Tree & 0.9362 & 0.8250 & 0.8197 \\
 \end{table}
 
 \subsection{Stacking is the best model}
-The headline result is the stacking ensemble: \textbf{0.9295 test accuracy and 0.9287 macro-F1} on the unseen subject. It beats hard voting (0.9277) and soft voting (0.9223), and sits well clear of the best single models, gradient boosting (0.9036) and SVM (0.8893). This is what we hoped for: the base learners disagree on different windows and the meta-learner exploits that disagreement. The lift from the best single model to stacking is about four points, consistent across all four metrics.
+The headline result is the stacking ensemble: \textbf{0.9295 test accuracy and 0.9287 macro-F1} on the unseen subject, beating hard voting (0.9277), soft voting (0.9223), and the best single models, gradient boosting (0.9036) and SVM (0.8893). This is what we hoped for: the base learners disagree on different windows and the meta-learner exploits that, a lift of about four points over the best single model across all metrics.
 
 \subsection{Where the mistakes are}
-Per-class F1 from the stacking model ranges from 0.991 (idle) and 0.969 (typing) down to 0.878 (smoking) and 0.879 (cooking). Idle and typing are nearly clean, as expected. The errors concentrate where the EDA predicted: cooking, the messiest activity, leaks into smoking (19 windows) and exercising (18), since it mixes slow arm motions like smoking with fast ones like exercise, and smoking spreads back into cooking (10), exercising (10), and typing (8). These low-motion and irregular activities were always the ambiguous cases.
+The stacking model's confusion matrix (Fig.~\ref{fig:confusion}) shows where recognition breaks down. Per-class F1 ranges from 0.991 (idle) and 0.969 (typing) down to 0.878 (smoking) and 0.879 (cooking). Idle and typing are nearly clean. The errors concentrate where the EDA predicted: cooking, the messiest activity, leaks into smoking and exercising, since it mixes slow arm motions like smoking with fast ones like exercise, and smoking spreads back into cooking, exercising, and typing. These low-motion and irregular activities were always the ambiguous cases.
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=0.46\textwidth]{figures/cm_best.png}
+  \caption{Normalised confusion matrix of the stacking model on the held-out subject\_2 (rows are true activities). Cooking and smoking drive most errors; idle and typing are nearly clean.}
+  \label{fig:confusion}
+\end{figure}
 
 \subsection{Grouped-CV vs.\ a genuinely new person}
 \label{sec:honesty}
-Grouped-CV reports about 0.99 for the top models while held-out test sits near 0.93; for stacking the gap is only $+0.0625$, so grouped-CV is an honest predictor of performance on a \emph{new recording from a known person}. The harder case is a genuinely new person. To probe it we ran leave-one-subject-out (train on one training subject, validate on the other): the numbers drop sharply to stacking 0.5455, SVM 0.5286, random forest 0.4879. With only three subjects this is a small, noisy estimate, but the message is clear. Recognising activities for a person already in the training distribution is close to solved; doing it for a truly new individual is much harder, and two training subjects cannot cover that variation. This is the main limitation of the current setup.
+Grouped-CV reports about 0.99 for the top models while held-out test sits near 0.93; for stacking the gap is only $+0.0625$, so grouped-CV is an honest predictor of performance on a \emph{new recording from a known person}. The harder case is a genuinely new person. To probe it we ran leave-one-subject-out (train on one training subject, validate on the other): the numbers drop sharply to stacking 0.5455, SVM 0.5286, random forest 0.4879. With only three subjects this is a small, noisy estimate, but the message is clear: activities for a person already in the training distribution are close to solved, while a truly new individual is much harder, and two training subjects cannot cover that variation. This is the main limitation here.
 
 
 % ─────────────────────────────────────────────────────────────
