@@ -1,0 +1,5 @@
+Feature set,n_features,Test accuracy,Test macro-F1
+Time-domain only,156,0.8955,0.8926
+Frequency-domain only,84,0.8268,0.8236
+Correlation only,9,0.4732,0.4601
+All features,249,0.8884,0.8858
