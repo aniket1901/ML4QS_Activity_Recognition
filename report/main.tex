@@ -6,6 +6,7 @@
 \usepackage{graphicx}
 \graphicspath{{figures/}{./}}
 \usepackage{booktabs}
+\usepackage{array}
 \usepackage{amsmath}
 \usepackage{hyperref}
 \usepackage{xcolor}
@@ -102,17 +103,18 @@ Every tunable model was tuned with \texttt{GridSearchCV} under \textbf{GroupKFol
 \begin{table}[ht]
 \caption{Grids searched (GridSearchCV under GroupKFold) and selected settings.}
 \label{tab:grids}
-\centering\small
-\setlength{\tabcolsep}{4pt}
-\begin{tabular}{lp{5.8cm}p{2.2cm}}
+\centering\footnotesize
+\setlength{\tabcolsep}{5pt}
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{@{}l >{\raggedright\arraybackslash}p{6.3cm} >{\raggedright\arraybackslash}p{2.1cm}@{}}
 \toprule
 \textbf{Model} & \textbf{Grid searched} & \textbf{Selected} \\
 \midrule
-kNN & \texttt{n\_neighbors} $\in \{1,3,5,7,9,11,15\}$ & $k=3$ \\
-Decision Tree & \texttt{max\_depth} $\in \{3,5,7,10,15,\text{None}\}$ & depth $=7$ \\
-Random Forest & \texttt{n\_estimators}$\in\{100,200,300\}$, \texttt{max\_depth}$\in\{$None$,10,20\}$, \texttt{max\_features}$\in\{$sqrt$,0.3\}$ & 300, None, 0.3 \\
-SVM (RBF) & \texttt{C}$\in\{0.1,1,10,100\}$, \texttt{gamma}$\in\{$scale$,0.001,0.01,0.1\}$ & $C{=}100$, $\gamma{=}0.001$ \\
-Gradient Boosting & \texttt{n\_estimators}$\in\{100,200\}$, \texttt{learning\_rate}$\in\{0.05,0.1\}$, \texttt{max\_depth}$\in\{2,3\}$ & lr 0.1, depth 2, 200 \\
+kNN & \texttt{n\_neighbors}: 1, 3, 5, 7, 9, 11, 15 & $k = 3$ \\
+Decision Tree & \texttt{max\_depth}: 3, 5, 7, 10, 15, None & depth 7 \\
+Random Forest & \texttt{n\_estimators}: 100, 200, 300; \texttt{max\_depth}: None, 10, 20; \texttt{max\_features}: sqrt, 0.3 & 300 trees, depth None, mf 0.3 \\
+SVM (RBF) & \texttt{C}: 0.1, 1, 10, 100; \texttt{gamma}: scale, 0.001, 0.01, 0.1 & $C{=}100$, $\gamma{=}0.001$ \\
+Gradient Boosting & \texttt{n\_estimators}: 100, 200; \texttt{learning\_rate}: 0.05, 0.1; \texttt{max\_depth}: 2, 3 & lr 0.1, depth 2, 200 \\
 Naive Bayes & none (GaussianNB defaults) & defaults \\
 \bottomrule
 \end{tabular}
