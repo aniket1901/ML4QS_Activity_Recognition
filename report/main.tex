@@ -1,0 +1,200 @@
+% ML4QS Practical Report - Intermediate Deadline 2 (max 5 pages excl. references)
+% LLNCS format, Springer Lecture Notes in Computer Science
+%
+\documentclass[runningheads]{llncs}
+
+\usepackage{graphicx}
+\graphicspath{{figures/}{./}}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{amsmath}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{microtype}
+
+\renewcommand\UrlFont{\color{blue}\rmfamily}
+
+\begin{document}
+
+\title{Recognizing Everyday Hand Activities from Wrist Sensor Data for Digital Wellbeing Applications}
+
+\titlerunning{Recognizing Hand Activities from Wrist Sensor Data}
+
+\author{Aniket Dasurkar \and Mansi Saxena \and Shreya Bhatt}
+\authorrunning{A. Dasurkar et al.}
+\institute{Vrije Universiteit Amsterdam, Amsterdam, The Netherlands}
+
+\maketitle
+
+\begin{abstract}
+We study whether a wrist-worn smartphone can tell apart five everyday hand activities: smoking, typing, idle, cooking, and dumbbell exercising. From inertial signals collected earlier in this project we build time-domain, frequency-domain, and axis-correlation features over short windows, then train and compare several classical classifiers. The hard part is generalising to a new person, so we train on two subjects and test on a third who recorded independently. A stacking ensemble of an SVM, a random forest, a kNN, and a decision tree reaches about 93\% accuracy on this unseen subject, ahead of voting ensembles and every single model. We also report an honest gap: grouped cross-validation predicts new-recording performance well, but a leave-one-subject-out check shows a genuinely new person is far harder. These results set the baseline that motivates the deep-learning stage.
+
+\keywords{Activity recognition \and Feature engineering \and Classical machine learning \and Ensemble learning \and Wrist sensors}
+\end{abstract}
+
+
+% ─────────────────────────────────────────────────────────────
+\section{Introduction}
+\label{sec:intro}
+% ─────────────────────────────────────────────────────────────
+
+A smartphone on the wrist records how the hand moves all day. If we can turn that motion into a label for what the person is doing, we have the building block for a digital wellbeing assistant that could track smoking, desk time, cooking, and exercise with no manual logging. That is the practical problem behind this project.
+
+In the earlier stage we strapped a phone to the dominant wrist with a sports armband and recorded accelerometer, gyroscope, and linear accelerometer data through Phyphox~\cite{phyphox2019}. Three subjects each performed the five activities in several short sessions. We train on two of them (subject\_1 and subject\_3) and keep the third (subject\_2) fully held out for testing. Subject\_2 recorded independently, so test accuracy reflects how the system would work for a new user, not a familiar one.
+
+This report covers feature engineering and classical modelling. The question we answer is concrete: \emph{given short windows of wrist motion, can a classical classifier built on engineered time- and frequency-domain features recognise these five activities, and how well does it transfer to a person it has never seen?}
+
+
+% ─────────────────────────────────────────────────────────────
+\section{Feature Engineering}
+\label{sec:features}
+% ─────────────────────────────────────────────────────────────
+
+Classical models need a fixed-length vector per example, so we summarise each window into features (course book Ch.~4~\cite{hoogendoorn2018}), following standard practice in human activity recognition from wearable sensors~\cite{lara2013}. All signals are resampled to 50\,Hz: the earlier analysis showed almost all motion sits below about 12\,Hz, so 50\,Hz leaves headroom while matching typical consumer wearables.
+
+\subsection{Window size}
+We slice the signal into \textbf{2-second windows with 50\% overlap} (a 1-second step). The first report had promised 4-second windows, and we changed that on purpose. Two seconds still captures the dominant rhythm of every activity, it roughly doubles the number of windows (more training examples), and shorter windows mix fewer distinct sub-movements. We do not claim 2\,s captures a full smoking cycle, which is slower; it captures enough of the repeating motion to be informative, and the extra examples were worth more than fitting one whole cycle per window. This gives \textbf{3{,}360 windows}, balanced across activities (672 each): \textbf{2{,}240 training} (subject\_1 + subject\_3) and \textbf{1{,}120 test} (subject\_2).
+
+\subsection{The three feature families}
+For every window we compute three groups of features, applied to all twelve signals (the nine raw axes of the three sensors plus three per-sensor magnitude channels):
+\begin{itemize}
+  \item \textbf{Time-domain (156 features).} How much the wrist moves and what shape that motion has: mean, std, range, RMS, signal magnitude area, peak-to-peak, IQR, MAD, zero-crossing rate, skewness, kurtosis. These separate a smooth swing from sharp taps.
+  \item \textbf{Frequency-domain (84 features).} The rhythm of the motion, from an FFT of each window: dominant frequency, spectral energy, spectral entropy. These pick up the speed differences seen earlier.
+  \item \textbf{Axis-correlation (9 features).} Whether the three directions move together, via pairwise correlations (x--y, x--z, y--z) per sensor. A coordinated arm swing and a one-directional tap differ here.
+\end{itemize}
+That is 249 features per window. A few windows produced undefined values (e.g.\ skewness on a near-constant idle window); we imputed these with each feature's median computed on the \emph{training} windows only, so nothing about the test subject leaked into preprocessing. The result is a clean $3{,}360 \times 249$ table.
+
+\subsection{Is the feature set actually useful?}
+To check whether each family earns its place, we trained a random forest on each group alone and on the full set, using the same person-independent split (Table~\ref{tab:ablation}).
+
+\begin{table}[ht]
+\caption{Feature-group ablation (random forest, held-out subject\_2).}
+\label{tab:ablation}
+\centering\small
+\begin{tabular}{lccc}
+\toprule
+\textbf{Feature set} & \textbf{\# features} & \textbf{Test accuracy} & \textbf{Test macro-F1} \\
+\midrule
+Time-domain only      & 156 & 0.8955 & 0.8926 \\
+Frequency-domain only & 84  & 0.8268 & 0.8236 \\
+Correlation only      & 9   & 0.4732 & 0.4601 \\
+All features          & 249 & 0.8884 & 0.8858 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The time-domain block carries most of the signal (0.8955 alone). Frequency features alone reach 0.8268, useful but secondary; the nine correlation features alone manage only 0.4732, well above the 0.20 random baseline but too weak on their own. One result surprised us: the full set (0.8884) scored slightly \emph{below} time-domain alone. The likely cause is redundancy and noise, since 191 feature pairs have $|r| > 0.95$, so the extra columns mostly repeat information while a few weak features dilute the forest's splits. We kept all 249 anyway, because the models we actually deploy (standardised SVM, ensembles) handle redundant inputs well. The random-forest importances agree: the top features are \texttt{acc\_y\_rms} and \texttt{acc\_y\_sma} (vertical-axis movement) and gyroscope spread features, while the first frequency feature appears only at rank~9, so motion magnitude dominates and rhythm adds a smaller increment.
+
+
+% ─────────────────────────────────────────────────────────────
+\section{Train/Test Setup and Models}
+\label{sec:models}
+% ─────────────────────────────────────────────────────────────
+
+\subsection{Person-independent split}
+We train on subject\_1 and subject\_3 (2{,}240 windows) and test on the held-out subject\_2 (1{,}120 windows), each balanced across the five activities. Subject\_2 never appears in training or model selection. This person-independent setup is the realistic way to evaluate activity recognition: random splits over windows badly overestimate performance because adjacent windows are near-identical~\cite{hammerla2016}. All 249 features are standardised to zero mean and unit variance using training statistics only, then applied unchanged to the test windows. The pipeline uses scikit-learn~\cite{pedregosa2011}.
+
+\subsection{Model line-up}
+We compared classical models with different inductive biases, then voted and stacked over the strongest ones (course book Ch.~7~\cite{hoogendoorn2018}): \textbf{kNN} and \textbf{Naive Bayes} as light-assumption baselines; a \textbf{Decision Tree} for interpretability; a \textbf{Random Forest} (robust, gives importances); an \textbf{SVM (RBF)} for curved boundaries on subtle cases like smoking vs.\ idle; \textbf{Gradient Boosting}; and \textbf{Voting (hard/soft)} and \textbf{Stacking} over the tuned base learners. Naive Bayes assumes the features are independent, which our heavily correlated features clearly violate, so we expected it to lag and treat it only as a floor. Ensembling helps because the base learners make different mistakes, so combining them cancels some error. We built the stack from four base learners spanning distinct families (margin-based SVM, bagged trees, distance-based kNN, and a single tree); gradient boosting, itself a boosted tree ensemble close to the random forest, is reported as a standalone baseline rather than a stack member to keep the members complementary. Stacking goes further than voting: a logistic-regression meta-learner is trained on the base models' outputs and learns which one to trust per case, which is why it edges out plain voting here.
+
+\subsection{Hyperparameter optimization}
+Every tunable model was tuned with \texttt{GridSearchCV} under \textbf{GroupKFold} grouped by recording session (Sect.~\ref{sec:cv}); the grids and chosen settings are in Table~\ref{tab:grids}. Naive Bayes was left at defaults, and the ensembles reuse these tuned base learners.
+
+\begin{table}[ht]
+\caption{Grids searched (GridSearchCV under GroupKFold) and selected settings.}
+\label{tab:grids}
+\centering\footnotesize
+\setlength{\tabcolsep}{5pt}
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{@{}l >{\raggedright\arraybackslash}p{6.3cm} >{\raggedright\arraybackslash}p{2.1cm}@{}}
+\toprule
+\textbf{Model} & \textbf{Grid searched} & \textbf{Selected} \\
+\midrule
+kNN & \texttt{n\_neighbors}: 1, 3, 5, 7, 9, 11, 15 & $k = 3$ \\
+Decision Tree & \texttt{max\_depth}: 3, 5, 7, 10, 15, None & depth 7 \\
+Random Forest & \texttt{n\_estimators}: 100, 200, 300; \texttt{max\_depth}: None, 10, 20; \texttt{max\_features}: sqrt, 0.3 & 300 trees, depth None, mf 0.3 \\
+SVM (RBF) & \texttt{C}: 0.1, 1, 10, 100; \texttt{gamma}: scale, 0.001, 0.01, 0.1 & $C{=}100$, $\gamma{=}0.001$ \\
+Gradient Boosting & \texttt{n\_estimators}: 100, 200; \texttt{learning\_rate}: 0.05, 0.1; \texttt{max\_depth}: 2, 3 & lr 0.1, depth 2, 200 \\
+Naive Bayes & none (GaussianNB defaults) & defaults \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Why GroupKFold, not shuffled K-fold}
+\label{sec:cv}
+Our windows overlap by 50\%, so consecutive windows from one recording share half their samples. A shuffled K-fold scatters such near-duplicates across folds, letting a model memorise a recording and inflating the CV score; in an earlier run this made kNN with $k=1$ look like the winner, the classic sign of leakage. GroupKFold keeps all windows from one recording in the same fold, so every CV number we report is leakage-free, and this changed which models we trusted.
+
+
+% ─────────────────────────────────────────────────────────────
+\section{Results and Discussion}
+\label{sec:discussion}
+% ─────────────────────────────────────────────────────────────
+
+Table~\ref{tab:results} lists every model with its grouped-CV accuracy and its held-out test accuracy and macro-F1 (selected hyperparameters are in Table~\ref{tab:grids}).
+
+\begin{table}[ht]
+\caption{All models, sorted by test macro-F1. Grouped-CV is on the training subjects; test is the held-out subject\_2.}
+\label{tab:results}
+\centering\small
+\begin{tabular}{lccc}
+\toprule
+\textbf{Model} & \textbf{CV acc} & \textbf{Test acc} & \textbf{Test F1} \\
+\midrule
+\textbf{Stacking (SVM+RF+kNN+DT $\to$ LR)} & 0.9920 & \textbf{0.9295} & \textbf{0.9287} \\
+Voting (hard) & 0.9924 & 0.9277 & 0.9271 \\
+Voting (soft) & 0.9929 & 0.9223 & 0.9213 \\
+Gradient Boosting & 0.9893 & 0.9036 & 0.9016 \\
+SVM (RBF) & 0.9915 & 0.8893 & 0.8892 \\
+kNN & 0.9920 & 0.8848 & 0.8840 \\
+Naive Bayes & 0.9353 & 0.8812 & 0.8792 \\
+Random Forest & 0.9879 & 0.8804 & 0.8762 \\
+Decision Tree & 0.9362 & 0.8250 & 0.8197 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Stacking is the best model}
+The headline result is the stacking ensemble: \textbf{0.9295 test accuracy and 0.9287 macro-F1} on the unseen subject, beating hard voting (0.9277), soft voting (0.9223), and the best single models, gradient boosting (0.9036) and SVM (0.8893). This is what we hoped for: the base learners disagree on different windows and the meta-learner exploits that, a lift of about four points over the best single model across all metrics.
+
+\subsection{Grouped-CV vs.\ a genuinely new person}
+\label{sec:honesty}
+Grouped-CV reaches about 0.99 for the top models while held-out test sits near 0.93 (a $+0.0625$ gap for stacking), so grouped-CV predicts performance well on a \emph{new recording from a known person}. A genuinely new person is much harder: leave-one-subject-out (train on one training subject, validate on the other) drops to stacking 0.5455, SVM 0.5286, random forest 0.4879. With only three subjects this is noisy, but the message is clear --- two training subjects cannot cover individual variation, and this is the main limitation here.
+
+
+% ─────────────────────────────────────────────────────────────
+\section{Conclusion}
+\label{sec:conclusion}
+% ─────────────────────────────────────────────────────────────
+
+To answer the research question: yes, a classical classifier on engineered time- and frequency-domain features recognises these five activities well for an unseen subject (0.9295 accuracy, 0.9287 macro-F1, far above the 0.20 baseline), driven by ensembling rather than any single model. Time-domain spread features did most of the work, with the remaining errors around cooking and smoking, the two least repeatable activities. The honest limit is the new person: leave-one-subject-out drops to about 0.53, so two training subjects cannot yet cover individual variation. That gap, plus the fact that our features are hand-designed window statistics, motivates the deep-learning stage, where a model can learn representations directly from the raw time series~\cite{ordonez2016}.
+
+
+% ─────────────────────────────────────────────────────────────
+\begin{thebibliography}{9}
+
+\bibitem{hoogendoorn2018}
+Hoogendoorn, M., Funk, B.: Machine Learning for the Quantified Self. Springer (2018)
+
+\bibitem{pedregosa2011}
+Pedregosa, F., Varoquaux, G., Gramfort, A., et al.: Scikit-learn: Machine learning in Python.
+Journal of Machine Learning Research \textbf{12}, 2825--2830 (2011)
+
+\bibitem{phyphox2019}
+Staacks, S., Hutz, S., Heinke, H., Stampfer, C.: Advanced tools for smartphone-based experiments: Phyphox.
+Physics Education \textbf{53}(4), 045009 (2018)
+
+\bibitem{lara2013}
+Lara, O.D., Labrador, M.A.: A survey on human activity recognition using wearable sensors.
+IEEE Communications Surveys \& Tutorials \textbf{15}(3), 1192--1209 (2013)
+
+\bibitem{hammerla2016}
+Hammerla, N.Y., Halloran, S., Pl\"otz, T.: Deep, convolutional, and recurrent models for human activity recognition using wearables.
+In: Proceedings of the International Joint Conference on Artificial Intelligence (IJCAI), pp.~1533--1540 (2016)
+
+\bibitem{ordonez2016}
+Ord\'o\~nez, F.J., Roggen, D.: Deep convolutional and LSTM recurrent neural networks for multimodal wearable activity recognition.
+Sensors \textbf{16}(1), 115 (2016)
+
+\end{thebibliography}
+
+\end{document}
